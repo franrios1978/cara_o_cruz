@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Tira una moneda dorada al aire y descubre si sale cara o cruz."
+    />
+    <title>Cara o Cruz</title>
+    <link rel="stylesheet" href="./css/global.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <p class="app__eyebrow">Un lanzamiento, dos posibilidades</p>
+        <h1 class="app__title">Cara o Cruz</h1>
+        <p class="app__subtitle">¿De qué lado caerá la moneda?</p>
+      </header>
+
+      <section class="game" aria-labelledby="game-title">
+        <h2 id="game-title" class="sr-only">Lanzamiento de moneda</h2>
+
+        <div class="coin-stage" data-state="idle">
+          <div class="coin-tosser">
+            <div class="coin" id="coin" aria-hidden="true">
+              <div class="coin__face coin__face--cara">
+                <img class="coin__image" src="./varios/moneda_cara.jpg" alt="" draggable="false" />
+              </div>
+
+              <div class="coin__face coin__face--cruz">
+                <img class="coin__image" src="./varios/moneda_cruz.jpg" alt="" draggable="false" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="result" id="result" role="status" aria-live="polite"></p>
+
+        <button class="throw-button" id="throw-button" type="button">
+          Haz click para tirar la moneda al aire
+        </button>
+      </section>
+    </main>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
