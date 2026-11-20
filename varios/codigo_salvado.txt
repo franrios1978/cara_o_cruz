@@ -68,6 +68,8 @@ Historial de fases
 18. El impacto de caída se volvió más metálico, agudo y breve.
 19. El `<h1>` pasó a `#FFC2F7`.
 20. El `<h1>` pasó a `#FFA6F3`.
+21. Se añadió imagen y metadatos Open Graph/Twitter para la vista previa al compartir.
+22. Se fijó la URL pública definitiva en `og:url`, `og:image` y `twitter:image`.
 
 Fase 2 — Maquetación y estilos
 ------------------------------
@@ -155,7 +157,7 @@ Comprobaciones ejecutadas:
 - Se usaron las herramientas ya instaladas en `node_modules`: `oxlint src/main.js src/modules`
   sin incidencias y `oxfmt --check` sobre HTML, CSS y JS. `oxfmt` aplicó el formato
   recomendado a `index.html` y `global.css`; la segunda comprobación quedó limpia.
-- Tras las fases 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 y 20 se repitieron `oxfmt --check`, `oxlint` y `node --check`
+- Tras las fases 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 y 22 se repitieron `oxfmt --check`, `oxlint` y `node --check`
   sin incidencias. El servidor temporal devolvió 200 para `/`, `/css/global.css`,
   `/varios/moneda_cara.jpg` y `/varios/moneda_cruz.jpg`.
 
@@ -326,19 +328,43 @@ Fase 20 — Ajuste final del título
 - Se actualizó `--pink` a `#ffa6f3` en `:root`; `.app__title` sigue usando `var(--pink)`.
 - El resto de la interfaz, el sonido y la lógica no se modificaron.
 
+Fase 21 — Vista previa para compartir
+--------------------------------------
+- El usuario pidió que al compartir el enlace por WhatsApp se viera una imagen de
+  presentación de la aplicación junto al enlace.
+- Se creó `src/varios/vista_previa.png`: 1200x630 px, ~151 KB, generado con Python puro
+  (PNG RGB con `zlib`) sin dependencias nuevas. Incluye moneda dorada dibujada, título
+  rosa `#FFA6F3`, eyebrow verde, botón menta `#6EDDC3` y mensaje crema `#FAF6EB`.
+- `src/index.html` incorpora `og:type`, `og:url`, `og:site_name`, `og:locale`, `og:title`,
+  `og:description`, `og:image`, `og:image:secure_url`, `og:image:width`,
+  `og:image:height`, `og:image:alt` y las equivalencias `twitter:*` con
+  `twitter:card=summary_large_image`.
+- Inicialmente `og:image` y `twitter:image` usaban una ruta relativa; en la fase 22 se
+  sustituyeron por la URL absoluta definitiva.
+- La lógica, la animación, los sonidos y el diseño de la página no se modificaron.
+
 Forma de ejecutar
 -----------------
 Los módulos ESM requieren HTTP, no `file://`. Desde la raíz del proyecto:
 `python3 -m http.server 8000 -d src`
 y abrir `http://localhost:8000`.
+Para redes sociales, el dominio definitivo es `https://franrios1978.github.io/cara_o_cruz/`;
+la imagen se sirve desde `https://franrios1978.github.io/cara_o_cruz/varios/vista_previa.png`.
+
+Fase 22 — URL pública definitiva
+---------------------------------
+- El usuario proporcionó `https://franrios1978.github.io/cara_o_cruz/`.
+- Se añadió `og:url` con esa dirección y se actualizaron `og:image`, `og:image:secure_url`
+  y `twitter:image` a `https://franrios1978.github.io/cara_o_cruz/varios/vista_previa.png`.
+- No se cambiaron la imagen, los estilos ni la lógica; solo metadatos y documentación.
 
 Estado final
 ------------
 Proyecto completado en vanilla con moneda que usa `moneda_cara.jpg` y `moneda_cruz.jpg`
 de `src/varios`, animación de lanzamiento, resultado aleatorio criptográfico, "clin" al
 lanzar e impacto metálico agudo al caer, imágenes centradas, sin borde ni sombras,
-título en rosa `#FFA6F3`, botón en menta `#6EDDC3`, mensajes en crema `#FAF6EB`
-y diseño responsive.
+título en rosa `#FFA6F3`, botón en menta `#6EDDC3`, mensajes en crema `#FAF6EB`,
+vista previa Open Graph para WhatsApp con URL absoluta y diseño responsive.
 El registro documental es este archivo; no existe `codigo_salvado.json`.
 La revisión visual interactiva en navegador queda recomendada para validar estética
 y audio en el equipo del usuario.
