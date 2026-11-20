@@ -1,0 +1,344 @@
+REGISTRO DE DESARROLLO — CARA O CRUZ
+=====================================
+
+Propósito de este archivo
+-------------------------
+Documento de referencia complementario para otras IAs o personas que continúen el proyecto.
+No es una fuente de datos en tiempo de ejecución: la web no lo importa ni lo lee.
+Se actualiza por fases a medida que se escribe el código.
+
+Estado actual
+-------------
+Fase 1: estructura acordada y limpieza del registro anterior.
+- Se ha eliminado el archivo vacío `src/varios/codigo_salvado.json` para evitar duplicidad.
+- Se usa `src/varios/codigo_salvado.txt` como único archivo de referencia documental.
+- El resto del árbol de carpetas creado por el usuario se respeta sin cambios.
+
+Árbol de carpetas esperado
+--------------------------
+cara_o_cruz/
+├── .gitignore
+├── README.md
+├── package.json
+├── pnpm-lock.yaml
+└── src/
+    ├── index.html
+    ├── main.js
+    ├── assets/
+    │   ├── fonts/.gitkeep
+    │   └── images/.gitkeep
+    ├── css/
+    │   └── global.css
+    ├── modules/
+    │   └── .gitkeep
+    └── varios/
+        └── codigo_salvado.txt
+
+Decisiones técnicas acordadas
+-----------------------------
+- Stack: HTML + CSS + JavaScript moderno con módulos ESM, sin dependencias externas.
+- Moneda: imágenes JPG reales de `src/varios` (`moneda_cara.jpg` y `moneda_cruz.jpg`,
+  1200x1200 px), aplicadas a cada cara de la moneda 3D. Los archivos anteriores
+  (`Cara.jpg` y `Cruz.jpg`) permanecen en la carpeta, pero ya no se usan.
+- Animación: 100% vanilla mediante CSS keyframes y un cambio de estado desde JS.
+- Aleatoriedad: `crypto.getRandomValues`, usando 1 byte y su bit de paridad para evitar sesgo.
+- Sonido: Web Audio API sintetiza un "clin" agudo al lanzar y un impacto metálico agudo al caer.
+- Accesibilidad: botón deshabilitado durante el turno, mensaje con `aria-live`,
+  soporte para `prefers-reduced-motion`.
+
+Historial de fases
+------------------
+1. Estructura revisada, registro `.json` retirado y este `.txt` creado como referencia.
+2. Maquetación y estilos completados.
+3. Lógica, aleatoriedad y sonido completados.
+4. Verificación y cierre.
+5. Las caras SVG se sustituyeron por las imágenes JPG de `src/varios`.
+6. Las imágenes se centraron y ampliaron para eliminar los márgenes blancos.
+7. Se añadió un borde perimetral oscuro con relieve a la moneda.
+8. El borde se ensanchó y se ajustó a un dorado oscuro más metálico.
+9. Se cambiaron las imágenes a `moneda_cara.jpg` y `moneda_cruz.jpg`.
+10. Se retiró el borde con relieve.
+11. Se eliminaron todas las sombras de la moneda para que no se proyecten sobre ella.
+12. Se integraron los colores #D5B65F, #7ED55F, #5F7ED5 y #B65FD5 en la interfaz.
+13. Se eliminó la línea degradada superior de la tarjeta.
+14. Ambos mensajes de resultado pasaron a `#5F7ED5`.
+15. El botón y los mensajes de resultado pasaron a `#6EDDC3`.
+16. Los mensajes de resultado pasaron a `#FAF6EB`; el botón sigue en menta.
+17. El `<h1>` pasó a `#D55FB9`, retirando su degradado.
+18. El impacto de caída se volvió más metálico, agudo y breve.
+19. El `<h1>` pasó a `#FFC2F7`.
+20. El `<h1>` pasó a `#FFA6F3`.
+
+Fase 2 — Maquetación y estilos
+------------------------------
+`src/index.html`:
+- Documento en español, viewport y descripción.
+- Encabezado con título "Cara o Cruz" y subtítulo.
+- `section.game` con un `h2.sr-only` para lectores de pantalla.
+- `.coin-stage` con `data-state="idle"`; contiene únicamente `.coin-tosser` > `.coin`
+  con dos `.coin__face`.
+- Cada cara contiene una etiqueta `img.coin__image`: `./varios/moneda_cara.jpg` en
+  `.coin__face--cara` y `./varios/moneda_cruz.jpg` en `.coin__face--cruz`
+  (1200x1200 px cada una). Las imágenes son decorativas (`alt=""`) porque `#coin` ya es
+  `aria-hidden="true"`.
+- Párrafo `#result` con `role="status"` y `aria-live="polite"`.
+- Botón `#throw-button` con el texto exacto: "Haz click para tirar la moneda al aire".
+- Carga de `./main.js` con `type="module"`.
+
+`src/css/global.css`:
+- Variables CSS para paleta, tamaño de moneda (`--coin-size`) y duración
+  (`--toss-duration: 1250ms`; debe coincidir con la constante de `main.js`).
+- Fondo degradado con brillos, tarjeta translúcida con `backdrop-filter`, tipografía
+  del sistema y diseño responsive (`clamp`, media query a 480px).
+- Moneda con `perspective` en el escenario y `transform-style: preserve-3d` en `.coin`;
+  cara a `rotateY(0deg)` y cruz a `rotateY(180deg)` con `backface-visibility: hidden`.
+- Estados controlados por `data-state` en `.coin-stage`: `idle`, `tossing` y `result`.
+- Keyframes: `toss` (subida, wobble y caída en `.coin-tosser`), `spin` (4 vueltas
+  + `--final-rotation` en `.coin`) y `settle` (ampliación final a escala 1.35 con
+  ligero giro).
+- En `result`, `.coin` aplica `rotateY(var(--final-rotation))` para fijar el lado ganador.
+- `#result` usa `.is-visible` y colores distintos según `data-result`.
+- Estilos de foco, hover y deshabilitado para el botón, además de
+  `@media (prefers-reduced-motion: reduce)` que reduce animaciones a 1ms.
+
+Fase 3 — Lógica, aleatoriedad y sonido
+--------------------------------------
+`src/modules/random.js`:
+- `getRandomResult()`: lee 1 byte con `globalThis.crypto.getRandomValues` y devuelve
+  `"cara"` si el bit 0 está a 0 y `"cruz"` si está a 1. Al usar un solo bit de un byte
+  aleatorio criptográfico no hay sesgo por módulo.
+
+`src/modules/sound.js`:
+- `audioContext` se crea de forma perezosa con `AudioContext`/`webkitAudioContext`.
+- `getAudioContext()`: reanuda el contexto si está `suspended`; devuelve `null` si la
+  API no existe, para que la web siga funcionando sin sonido.
+- `playTone({ frequency, duration, type, gain, detune })`: oscilador + envolvente
+  exponencial; ataque de 4ms y decaimiento hasta 0.0001.
+- `playNoise({ duration, gain, filterFrequency, resonance })`: buffer corto de ruido con
+  envolvente y filtro `bandpass` (Q 1.2 por defecto); simula el contacto con el suelo.
+- `playLaunchSound()`: "clin" inicial con parciales de 2100 Hz (sine), 3150 Hz
+  (triangle, +8 cents) y 4300 Hz (sine).
+- `playLandingSound()`: impacto metálico agudo con parciales inarmónicos de 1180 Hz
+  (sine), 1770 Hz (sine, +12 cents), 2630 Hz (triangle, -18 cents) y 3980 Hz (sine),
+  con decaimientos de 130/100/75/50 ms y ruido filtrado a 5200 Hz (Q 5) durante 50 ms.
+
+`src/main.js`:
+- Referencias: `.coin-stage`, `#coin`, `#throw-button` y `#result`.
+- Constantes: `TURN_DURATION = 1250` (idéntico a `--toss-duration` en CSS),
+  `FINAL_ROTATIONS` (`cara` → `0deg`, `cruz` → `180deg`) y `MESSAGES`
+  (`¡Ha salido cara!` / `¡Ha salido cruz!`).
+- `waitForLanding()`: promesa que resuelve al recibir `animationend` de `spin` en
+  `#coin`; incluye un `setTimeout` de seguridad de 1450ms para no bloquear el turno.
+- `throwCoin()`: ignora clicks con el botón deshabilitado; limpia el mensaje, obtiene
+  el resultado, fija `--final-rotation`, reproduce el clin, fuerza un reflow con
+  `void stage.offsetWidth`, cambia el estado a `tossing`, espera la caída, reproduce
+  el impacto, cambia a `result`, muestra el mensaje y rehabilita el botón.
+- Evento: `button.addEventListener("click", throwCoin)`.
+
+Flujo de estados
+----------------
+`idle` → (click) → `tossing` → (animationend de `spin` o timeout) → `result`
+→ (nuevo click) → `idle`.
+
+Fase 4 — Verificación y cierre
+-------------------------------
+Comprobaciones ejecutadas:
+- `node --check src/main.js`, `node --check src/modules/random.js` y
+  `node --check src/modules/sound.js`: sintaxis correcta.
+- Importación real de `getRandomResult()` con 2000 lanzamientos de prueba:
+  `{"cara":1015,"cruz":985}`; ambas caras aparecen y la distribución es equilibrada.
+- Búsqueda de textos exactos: el botón y los dos mensajes coinciden con lo solicitado.
+- Búsqueda de duración: `--toss-duration: 1250ms` en CSS y `TURN_DURATION = 1250` en JS.
+- Servidor estático temporal con `python3 -m http.server 8123 -d src`: `/`, `/main.js`,
+  `/css/global.css`, `/modules/random.js` y `/modules/sound.js` devolvieron 200.
+- `package.json` no define scripts de lint ni typecheck; no se añadieron dependencias.
+- Se usaron las herramientas ya instaladas en `node_modules`: `oxlint src/main.js src/modules`
+  sin incidencias y `oxfmt --check` sobre HTML, CSS y JS. `oxfmt` aplicó el formato
+  recomendado a `index.html` y `global.css`; la segunda comprobación quedó limpia.
+- Tras las fases 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 y 20 se repitieron `oxfmt --check`, `oxlint` y `node --check`
+  sin incidencias. El servidor temporal devolvió 200 para `/`, `/css/global.css`,
+  `/varios/moneda_cara.jpg` y `/varios/moneda_cruz.jpg`.
+
+Fase 5 — Imágenes reales en la moneda
+-------------------------------------
+- Se retiraron los dos SVG inline de `src/index.html`.
+- Inicialmente `.coin__face--cara` mostraba `./varios/Cara.jpg` y `.coin__face--cruz`
+  mostraba `./varios/Cruz.jpg`, respetando la capitalización real de esos archivos.
+- En la fase 9 esas rutas se sustituyeron por `./varios/moneda_cara.jpg` y
+  `./varios/moneda_cruz.jpg`, según los archivos nuevos aportados por el usuario.
+- `src/css/global.css` sustituyó `.coin__face svg` por `.coin__image` con
+  `width/height: 100%`, `object-fit: cover`, `border-radius: 50%` y sin arrastre.
+- Se eliminó el brillo `::after` inicial para no alterar las imágenes originales; en las
+  fases 7 y 8 se reintrodujo como borde perimetral y en la fase 10 se retiró definitivamente.
+
+Fase 6 — Centrado y recorte de las imágenes
+--------------------------------------------
+- Se añadió `--coin-image-zoom: 1.25` en `:root` para controlar el recorte sin tocar
+  las etiquetas HTML.
+- `.coin__image` pasó a `position: absolute` con `top/left: 50%` y
+  `transform: translate(-50%, -50%)`, garantizando centrado exacto en `.coin__face`.
+- Sus dimensiones son `calc(100% * var(--coin-image-zoom))` con `max-width: none`,
+  `object-fit: cover` y `object-position: center`; así el borde blanco de los JPG queda
+  fuera del círculo y la imagen de la moneda ocupa todo el contenedor.
+- Si en el futuro las imágenes cambian de margen, basta ajustar `--coin-image-zoom`.
+
+Fase 7 — Borde con relieve
+--------------------------
+- Se añadieron `--coin-edge-dark` (`rgba(96, 54, 0, 0.95)` inicialmente) y `--coin-edge-light`
+  (`rgba(255, 229, 150, 0.5)`) en `:root` para ajustar el tono del canto.
+- `.coin__face` conserva solo la sombra exterior; el antiguo anillo claro `inset` se
+  retiró porque quedaba oculto bajo la imagen.
+- `.coin__face::after` volvió como capa decorativa con `z-index: 1`, por encima de
+  `.coin__image` (`z-index: 0`), y aplica tres `box-shadow` inset:
+  1. anillo oscuro de 3px inicialmente, simulando el canto metálico,
+  2. anillo claro de 5px inicialmente, justo por dentro para dar volumen,
+  3. sombra suave de 12px/5px para reforzar el relieve.
+- El borde no modifica ni el centrado ni el zoom de las imágenes.
+
+Fase 8 — Canto más ancho y dorado oscuro
+----------------------------------------
+- `--coin-edge-dark` pasó de `rgba(96, 54, 0, 0.95)` a `rgba(122, 74, 6, 0.98)`:
+  menos marrón y más dorado oscuro, con opacidad casi total.
+- El anillo oscuro del `box-shadow` inset de `.coin__face::after` pasó de 3px a 5px.
+- El anillo claro interior pasó de 5px a 7px para mantener proporción y volumen.
+- La sombra suave (12px/5px) y el resto de la animación no se modificaron.
+
+Fase 9 — Nuevas imágenes de la moneda
+-------------------------------------
+- El usuario añadió `moneda_cara.jpg` y `moneda_cruz.jpg` a `src/varios` (1200x1200 px).
+- Se actualizaron únicamente los dos atributos `src` de `src/index.html`:
+  cara → `./varios/moneda_cara.jpg`, cruz → `./varios/moneda_cruz.jpg`.
+- No se cambiaron el HTML estructural, el centrado/zoom de `.coin__image`, el borde
+  con relieve ni la lógica JS.
+- Los archivos antiguos `Cara.jpg` y `Cruz.jpg` y sus `.Zone.Identifier` se dejaron
+  intactos porque el usuario no pidió borrarlos.
+
+Fase 10 — Retirada del borde con relieve
+----------------------------------------
+- El usuario pidió quitar el borde añadido en las fases 7 y 8; esas dos fases quedan
+  como histórico y ya no describen el estado actual.
+- Se eliminaron `--coin-edge-dark` y `--coin-edge-light` de `:root`.
+- Se eliminó por completo el bloque `.coin__face::after` de `src/css/global.css`.
+- Se quitó `z-index: 0` de `.coin__image` porque ya no hay capa superior que lo requiera.
+- `.coin__face` conserva únicamente `overflow: hidden`, `border-radius: 50%` y el color
+  de respaldo; el centrado, el zoom 1.25 y la lógica JS siguen igual.
+
+Fase 11 — Eliminación de sombras sobre la moneda
+------------------------------------------------
+- El usuario vio una sombra proyectada sobre la moneda ampliada cuando aparecía el
+  mensaje `¡Ha salido cara!` (y podía ocurrir también con cruz).
+- Causa: `.coin-stage__shadow` era un hermano posterior de `.coin-tosser`, por lo que
+  se pintaba encima; al ampliar la moneda con `settle` (escala 1.35), la elipse
+  difuminada quedaba dentro del área de la moneda.
+- Se eliminó el `<div class="coin-stage__shadow">` de `src/index.html`.
+- Se eliminaron de `src/css/global.css` la regla base `.coin-stage__shadow`, los dos
+  selectores de estados `tossing`/`result`, el `@keyframes shadow` y su entrada en
+  `@media (prefers-reduced-motion: reduce)`.
+- Se eliminó también el `box-shadow` exterior de `.coin__face` para que no quede
+  ninguna sombra asociada a la moneda.
+- La animación `toss`, el giro `spin`, el resultado y los sonidos no se modificaron.
+
+Fase 12 — Paleta armónica de cuatro colores
+--------------------------------------------
+- El usuario pidió combinar `#D5B65F`, `#7ED55F`, `#5F7ED5` y `#B65FD5` respetando el
+  color dorado de la moneda, que no se modificó: se mantienen `moneda_cara.jpg` y
+  `moneda_cruz.jpg`, su zoom 1.25 y la ausencia de borde/sombras.
+- Variables nuevas en `:root`: `--gold: #d5b65f`, `--green: #7ed55f`, `--blue: #5f7ed5`,
+  `--purple: #b65fd5` y `--gold-deep: #a8842f`. Se retiró `--silver`.
+- El dorado sigue siendo el color principal: borde de la tarjeta y color de respaldo de
+  `.coin__face`; inicialmente tiñó el título y el resultado `cara` (fases 14 y 17).
+- El verde se usa en `.app__eyebrow`, en el foco de teclado y, hasta la fase 17, en el
+  degradado del título; el botón ya no depende del verde para su hover.
+- El azul aparece en el texto secundario (`--muted`), los brillos de fondo y, desde la
+  fase 14, en los dos mensajes de resultado.
+- El violeta se usa en un brillo de fondo; inicialmente también tiñó el resultado `cruz`.
+- Inicialmente se añadió `.game::before`, una línea superior de 3px con los cuatro
+  colores en degradado; se retiró en la fase 13 a petición del usuario.
+- Los fondos usan opacity baja para que la jerarquía visual siga dominada por la moneda.
+
+Fase 13 — Retirada de la línea degradada
+----------------------------------------
+- El usuario pidió eliminar la línea de colores degradados de la parte superior de
+  `.game`, manteniendo el resto de la paleta.
+- Se eliminó el bloque `.game::before` de `src/css/global.css` y la regla que ajustaba
+  su `border-radius` en `@media (max-width: 480px)`.
+- Se quitó `position: relative` de `.game` porque solo servía a ese pseudo-elemento.
+- La paleta sigue activa en título, eyebrow, texto, fondos y mensajes; la moneda y su
+  animación no se modificaron.
+
+Fase 14 — Mensajes de resultado en azul
+----------------------------------------
+- El usuario pidió usar `#5F7ED5` tanto en `¡Ha salido cara!` como en `¡Ha salido cruz!`.
+- `.result[data-result="cara"]` y `.result[data-result="cruz"]` usan ahora `var(--blue)`,
+  que equivale a `#5f7ed5`, con `text-shadow` `rgba(95, 126, 213, 0.32)`.
+- El texto, la animación, las imágenes y el resto de la paleta no se modificaron.
+- Esta fase quedó superada por la 15: el azul fue sustituido por `#6EDDC3`.
+
+Fase 15 — Color menta para botón y mensajes
+--------------------------------------------
+- El usuario pidió `#6EDDC3` primero para `#throw-button` y después para los mensajes
+  `¡Ha salido cara!` y `¡Ha salido cruz!`; se aplicó el mismo color a ambos lugares.
+- Se añadieron `--mint: #6eddc3` y `--mint-deep: #3aa88f` en `:root`.
+- `.throw-button` usa `linear-gradient(135deg, #b9f2e5, var(--mint) 45%, var(--mint-deep))`,
+  sombra `rgba(110, 221, 195, 0.3)` (hover `0.36`), texto `#083028` y foco `var(--mint)`.
+- `.result[data-result="cara"]` y `.result[data-result="cruz"]` usan `var(--mint)` con
+  `text-shadow: 0 0 18px rgba(110, 221, 195, 0.32)`.
+- La moneda, sus imágenes, el centrado, la animación y los sonidos permanecen intactos.
+- En la fase 16 los mensajes pasaron a `#FAF6EB`; el botón conserva el menta.
+
+Fase 16 — Mensajes en crema
+----------------------------
+- El usuario pidió `#FAF6EB` para `¡Ha salido cara!` y `¡Ha salido cruz!`.
+- Se añadió `--cream: #faf6eb` en `:root`.
+- `.result[data-result="cara"]` y `.result[data-result="cruz"]` usan ahora `var(--cream)`
+  con `text-shadow: 0 0 18px rgba(250, 246, 235, 0.25)`.
+- El botón sigue en menta `#6EDDC3`; moneda, animación y sonidos no se modificaron.
+
+Fase 17 — Título en rosa
+-------------------------
+- El usuario pidió `#D55FB9` para el `<h1>` (`.app__title`).
+- Se añadió `--pink: #d55fb9` en `:root`.
+- Se retiraron `background: linear-gradient(...)`, `background-clip: text`,
+  `-webkit-background-clip: text` y `color: transparent` de `.app__title`; ahora usa
+  directamente `color: var(--pink)`.
+- El resto de la interfaz, la moneda y la lógica no se modificaron.
+- En la fase 19 el rosa se aclaró a `#FFC2F7`.
+
+Fase 18 — Impacto metálico agudo
+---------------------------------
+- El usuario pidió que el sonido de caída fuera más metálico y más agudo.
+- `playLandingSound()` sustituyó los 520/760 Hz y el ruido a 1400 Hz por parciales
+  inarmónicos de 1180, 1770, 2630 y 3980 Hz con decaimientos más cortos.
+- `playNoise()` acepta `resonance` (Q del filtro `bandpass`); el impacto usa Q 5 y
+  ruido a 5200 Hz durante 50 ms para reforzar el brillo metálico.
+- El sonido de lanzamiento, la animación y el resto de la interfaz no se modificaron.
+
+Fase 19 — Título en rosa claro
+-------------------------------
+- El usuario pidió `#FFC2F7` para el `<h1>`.
+- Se actualizó `--pink` a `#ffc2f7` en `:root`; `.app__title` sigue usando `var(--pink)`.
+- El resto de la interfaz, el sonido y la lógica no se modificaron.
+- En la fase 20 el rosa se ajustó a `#FFA6F3`.
+
+Fase 20 — Ajuste final del título
+----------------------------------
+- El usuario pidió `#FFA6F3` para el `<h1>`.
+- Se actualizó `--pink` a `#ffa6f3` en `:root`; `.app__title` sigue usando `var(--pink)`.
+- El resto de la interfaz, el sonido y la lógica no se modificaron.
+
+Forma de ejecutar
+-----------------
+Los módulos ESM requieren HTTP, no `file://`. Desde la raíz del proyecto:
+`python3 -m http.server 8000 -d src`
+y abrir `http://localhost:8000`.
+
+Estado final
+------------
+Proyecto completado en vanilla con moneda que usa `moneda_cara.jpg` y `moneda_cruz.jpg`
+de `src/varios`, animación de lanzamiento, resultado aleatorio criptográfico, "clin" al
+lanzar e impacto metálico agudo al caer, imágenes centradas, sin borde ni sombras,
+título en rosa `#FFA6F3`, botón en menta `#6EDDC3`, mensajes en crema `#FAF6EB`
+y diseño responsive.
+El registro documental es este archivo; no existe `codigo_salvado.json`.
+La revisión visual interactiva en navegador queda recomendada para validar estética
+y audio en el equipo del usuario.
